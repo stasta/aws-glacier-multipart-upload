@@ -5,7 +5,12 @@
 # sudo dnf install parallel
 # sudo pip install awscli
 
-byteSize=4194304
+#	Byte size to be uploaded per request
+BYTE-SIZE=4194304
+#	Glacier vault's name
+VAULT-NAME=""	
+#	Archive's description (shown on glacier console and listing)
+ARCHIVE-DESCRIPTION=""
 
 # count the number of files that begin with "part"
 fileCount=$(ls -1 | grep "^part" | wc -l)
@@ -15,7 +20,7 @@ echo "Total parts to upload: " $fileCount
 files=$(ls | grep "^part")
 
 # initiate multipart upload connection to glacier
-init=$(aws glacier initiate-multipart-upload --account-id - --part-size $byteSize --vault-name media1 --archive-description "November 2015 Pictures and Videos")
+init=$(aws glacier initiate-multipart-upload --account-id - --part-size ${BYTE-SIZE} --vault-name ${VAULT-NAME} --archive-description ${ARCHIVE-DESCRIPTION})
 
 echo "---------------------------------------"
 # xargs trims off the quotes
@@ -29,9 +34,9 @@ touch commands.txt
 i=0
 for f in $files 
   do
-     byteStart=$((i*byteSize))
-     byteEnd=$((i*byteSize+byteSize-1))
-     echo aws glacier upload-multipart-part --body $f --range "'"'bytes '"$byteStart"'-'"$byteEnd"'/*'"'" --account-id - --vault-name media1 --upload-id $uploadId >> commands.txt
+     byteStart=$((i*${BYTE-SIZE}))
+     byteEnd=$((i*${BYTE-SIZE}+${BYTE-SIZE}-1))
+     echo aws glacier upload-multipart-part --body $f --range "'"'bytes '"$byteStart"'-'"$byteEnd"'/*'"'" --account-id - --vault-name ${VAULT-NAME}  --upload-id $uploadId >> commands.txt
      i=$(($i+1))
      
   done
@@ -45,16 +50,16 @@ parallel --load 100% -a commands.txt --no-notice --bar
 
 echo "List Active Multipart Uploads:"
 echo "Verify that a connection is open:"
-aws glacier list-multipart-uploads --account-id - --vault-name media1
+aws glacier list-multipart-uploads --account-id - --vault-name ${VAULT-NAME} 
 
 # end the multipart upload
-aws glacier abort-multipart-upload --account-id - --vault-name media1 --upload-id $uploadId
+aws glacier abort-multipart-upload --account-id - --vault-name ${VAULT-NAME}  --upload-id $uploadId
 
 # list open multipart connections
 echo "------------------------------"
 echo "List Active Multipart Uploads:"
 echo "Verify that the connection is closed:"
-aws glacier list-multipart-uploads --account-id - --vault-name media1
+aws glacier list-multipart-uploads --account-id - --vault-name ${VAULT-NAME} 
 
 #echo "-------------"
 #echo "Contents of commands.txt"
